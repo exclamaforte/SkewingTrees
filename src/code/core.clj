@@ -23,6 +23,10 @@
   "returns a list attributes that is of a dataset, from a Instances class."
   [insts]
   (enumeration-seq (. (nth (. insts toArray) 0) enumerateAttributes)))
+(defn get-attr-val
+  "returns the value of attr in inst"
+  [attr inst]
+  (. inst value attr))
 (defn get-class
   "get the Attribute class of an instance"
   [insta]
@@ -90,6 +94,10 @@
   "returns the possible vals of an attribute"
   [attr]
   (enumeration-seq (. attr enumerateValues)))
+(defn attribute-seq
+  "returns an sequence of the attributes"
+  [insts]
+  (enumeration-seq (. insts enumerateAttributes)))
 (def test-data (get-data "/home/gabe/Projects/Research2015/data/lymph_train.arff"))
 (def test-instances (get-instances test-data))
 (. test-instances setClassIndex (- (. test-instances numAttributes) 1))
