@@ -49,10 +49,10 @@
   (/ (java.lang.Math/log n) (java.lang.Math/log 2)))
 
 (defn entropy
-  [split]
+  [flt]
   "split is a normalized sequence of splits"
-  (sum (for [y split]
-         (* -1 y (log2 y)))))
+  (* flt
+     (log2 flt)))
 (defn normalize
   [coll]
   (map #(/ % (sum coll))

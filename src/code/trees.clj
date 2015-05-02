@@ -28,10 +28,19 @@
 (defn get-values-of-attr
   [x-attr instances]
   (for [inst instances] (. inst value x-attr)))
-(defn probability
-  [x-attr] x-attr)
+(defn px
+  "num-x:number of instances with x, "
+  [num-x training-size x-attr]
+  (if (. x-attr isNominal)
+    (/ (+ num-x 1)
+       (+ training-size (count (core/attribute-vals x-attr))))
+    (throw (Exception. "x-attr must be nominal"))))
 (defn p-y-given-x
-  [y x instances])
+  [num-y-and-x num-y y-attr]
+  (if (. y-attr isNominal)
+    (/ (+ num-y-and-x 1)
+       (+ num-y (count (core/attribute-vals y-attr))))
+    (throw (Exception. "x-attr must be nominal"))))
 (defn conditional-entropy
   [x-attr instances]
   (let [num-inst (count instances)
@@ -49,17 +58,17 @@
     (core/sum
      (for [x x-filters]
        (let [fil-x (filter x instances)
-             fil-y (filter x instances)
-             pr-x (probability x-attr)
-             pr-y (probability y-attr)]
+             pr-x (px (count fil-x) num-inst x-attr)]
          (* (core/sum
              (for [y y-filters]
-               (let [pygx (p-y-given-x y x instances)]
-                 (* pygx
-                    (core/log2 pygx)))))
+               (let [fil-y (filter y instances)
+                     pygx (p-y-given-x (filter #(and (x %) (y %)) instances)
+                                       (count fil-y)
+                                       y-attr)]
+                 (core/entropy pygx))))
             pr-x
             -1))))))
-()
+
 
 ;TODO
 (defn best-split
