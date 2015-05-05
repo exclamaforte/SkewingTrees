@@ -122,10 +122,14 @@
 (defn same
   "returns whether or not a collection contains the same element"
   [coll]
-  (empty? (remove #(= % (first coll)))))
+  (empty? (remove #(= % (first coll)) coll)))
 (def test-data (get-data "/home/gabe/Projects/Research2015/data/lymph_train.arff"))
 (def test-instances (get-instances test-data))
 (. test-instances setClassIndex (- (. test-instances numAttributes) 1))
+
+(def heart-data (get-data "/home/gabe/Projects/Research2015/data/heart_train.arff"))
+(def heart (get-instances heart-data))
+(. heart setClassIndex (- (. heart numAttributes) 1))
 (def wine-data (get-data "/home/gabe/Projects/Research2015/data/wine.arff"))
 (def wine (get-instances wine-data))
 (. wine setClassIndex 0)

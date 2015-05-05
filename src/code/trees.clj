@@ -1,5 +1,8 @@
 (ns skewing.trees
-  (:require [skewing.core :as core]))
+  (:require [skewing.core :as core]
+            [taoensso.timbre :as timbre]))
+(timbre/refer-timbre)
+
 (use 'print.foo)
 
 (defn make-node
@@ -49,29 +52,31 @@
   [x-attr instances]
   (let [num-inst (count instances)
         y-attr (core/get-class-attribute instances)
-        x-filters (core/lambdas (if (. x-attr isNumeric)
-                                  (core/split-instances x-attr instances)
-                                  (core/attribute-vals x-attr))
-                                #(. % stringValue x-attr)
-                                (if (. x-attr isNumeric) > =)) ;figure out meta data
-        y-filters (core/lambdas (if (. y-attr isNumeric)
-                                  (core/split-instances y-attr instances)
-                                  (core/attribute-vals y-attr))
-                                #(. % stringValue y-attr)
-                                (if (. y-attr isNumeric) > =))
-        x-splits (into {} (for [x x-filters]
-                            [(:split (meta x)) (filter x instances)]))]
+        x-filters (p :x-filters (core/lambdas (if (. x-attr isNumeric)
+                                   (core/split-instances x-attr instances)
+                                   (core/attribute-vals x-attr))
+                                 #(. % stringValue x-attr)
+                                 (if (. x-attr isNumeric) > =))) ;figure out meta data
+        y-filters (p :y-filters (core/lambdas (if (. y-attr isNumeric)
+                                   (core/split-instances y-attr instances)
+                                   (core/attribute-vals y-attr))
+                                 #(. % stringValue y-attr)
+                                 (if (. y-attr isNumeric) > =)))
+        x-splits (p :x-splits (into {} (for [x x-filters]
+                                         [(:split (meta x)) (filter x instances)])))
+        y-splits (p :y-splits (into {} (for [y y-filters]
+                                         [(:split (meta y)) (filter y instances)])))]
     [x-splits
      (core/sum
       (for [x x-filters]
         (let [fil-x (get x-splits (:split (meta x)))
-              pr-x (px (count fil-x) num-inst x-attr)]
+              pr-x (p :pr-x (px (count fil-x) num-inst x-attr))]
           (* (core/sum
               (for [y y-filters]
-                (let [fil-y (filter y instances)
-                      pygx (p-y-given-x (count (filter #(and (x %) (y %)) instances))
-                                        (count fil-y)
-                                        y-attr)]
+                (let [fil-y (get y-splits (:split (meta y)))
+                      pygx (p :p-y-given-x (p-y-given-x (count (filter #(x %) fil-y))
+                                                        (count fil-y)
+                                                        y-attr))]
                   (core/entropy pygx))))
              pr-x
              -1))))]))
@@ -82,9 +87,9 @@
                                         [attr (conditional-entropy attr instances)])))
 
 (defn stop-making-subtree?
-  [instances possible-features]
+  [instances possible-features m]
   (or (empty? possible-features)
-      (empty? instances)
+      (>= m (count instances))
       (let [y-attr (core/get-class instances)]
         (core/same (map #(core/get-attr-val y-attr %) instances)))))
 
@@ -96,18 +101,15 @@
                             [attr-val (/ (count (filter #(= attr-val (. % stringValue y-attr))
                                                       instances))
                                          (count instances))]))))
-(defn nonempty-splits
-  "returns the values that at least one instance takes in the set of instances"
-  [instances best-attr x-splits]
-  ())
+
 (defn dt-make-subtree
-  [node instance-seq possible-features]
   "data: training set, possible-features: set of features that can be split over"
-  (if (stop-making-subtree? instance-seq possible-features)
+  [node instance-seq possible-features]
+  (if (stop-making-subtree? instance-seq possible-features 2)
     (-> node
-          (set-node-label (majority-class-vote instance-seq))
-          (add-data instance-seq))
-    (let [best (best-split instance-seq possible-features)
+        (set-node-label (majority-class-vote instance-seq))
+        (add-data instance-seq))
+    (let [best (p :find-split (best-split instance-seq possible-features))
           best-attr (first best)
           conditional-entropy (second (second best))
           x-splits (first (second best))]
@@ -118,9 +120,37 @@
                            (dt-make-subtree (make-node nil)
                                             insts
                                             (disj possible-features best-attr))))))))
+
 (defn build-decision-tree
   [instances]
   (if (> (count instances) 0)
     (let [instances (seq instances)]
       (dt-make-subtree (make-node nil) instances (set (core/attribute-seq instances))))
     (throw (Exception. "instances must have at least at least one element"))))
+
+
+(defn dt-make-randomized-subtree
+  [node instance-seq possible-features]
+  (if (stop-making-subtree? instance-seq possible-features 2)
+    (-> node
+        (set-node-label (majority-class-vote instance-seq))
+        (add-data instance-seq))
+    (let [best (p :find-split (best-split instance-seq (possible-features)))
+          best-attr (first best)
+          conditional-entropy (second (second best))
+          x-splits (first (second best))]
+      (reduce add-edge
+              (add-feature node best-attr)
+              (for [[val insts] x-splits :when (> (count insts) 0)]
+                (make-edge val
+                           (dt-make-subtree (make-node nil)
+                                            insts
+                                            (disj possible-features best-attr))))))))
+(defn build-random-forest
+  "returns a list of t random decision trees"
+  [instances t]
+  (for [i (range t)]
+    (let [new-instances (core/sample-with-replacement instances (count instances))]
+      (dt-make-randomized-subtree (make-node nil)
+                                  new-instances
+                                  (set (core/attribute-seq new-instances))))))

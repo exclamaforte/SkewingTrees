@@ -7,4 +7,5 @@
                  [nz.ac.waikato.cms.weka/weka-dev "3.7.7"]
                  [print-foo "1.0.1"]
                  [org.clojure/math.combinatorics "0.1.1"]
-                 [org.clojure/test.check "0.7.0"]])
+                 [org.clojure/test.check "0.7.0"]
+                 [com.taoensso/timbre "3.4.0"]])
