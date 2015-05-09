@@ -119,10 +119,42 @@
   (if (seq? insts)
     (enumeration-seq (. (nth insts 0) enumerateAttributes))
     (enumeration-seq (. insts enumerateAttributes))))
+
 (defn same
   "returns whether or not a collection contains the same element"
   [coll]
   (empty? (remove #(= % (first coll)) coll)))
+
+(defn rand-bool
+  "returns true or false with equal probability"
+  []
+  (= (rand-int 2) 1))
+
+(defn exp [x n]
+  (loop [acc 1 n n]
+    (if (zero? n) acc
+        (recur (* x acc) (dec n)))))
+
+(defn xor
+  [& x]
+  (odd? (- (get (frequencies (conj (map true? x) true))
+                true)
+           1)))
+
+(defn mean
+  [data]
+  (/ (reduce + data)
+     (count data)))
+
+(defn variance
+  [data]
+    (def sqr (fn [x] (* x x)))
+    (let [mv (mean data)]
+      (/ (reduce + (map #(sqr (- % mv)) data))
+         (count data))))
+(defn find-max-key
+  [mp]
+  (key (apply max-key val mp)))
 (def test-data (get-data "/home/gabe/Projects/Research2015/data/lymph_train.arff"))
 (def test-instances (get-instances test-data))
 (. test-instances setClassIndex (- (. test-instances numAttributes) 1))
@@ -135,3 +167,5 @@
 (. wine setClassIndex 0)
 (def numeric (filter #(. % isNumeric) (enumeration-seq (. wine enumerateAttributes))))
 (def not-numeric (filter #(not (. % isNumeric)) (enumeration-seq (. wine enumerateAttributes))))
+(def bin-inst (get-instances (get-data "/home/gabe/Projects/Research2015/data/generated/11_500_1431057173469_train.arff")))
+(. bin-inst setClassIndex 0)

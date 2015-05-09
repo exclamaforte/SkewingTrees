@@ -15,3 +15,6 @@
                                      (get preferred attr))
                                 c
                                 1)))]))))
+(defn sum-weights
+  [instances skw]
+  (reduce + (map #(get skw %) instances)))
